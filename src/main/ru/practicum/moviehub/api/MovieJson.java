@@ -31,7 +31,8 @@ public class MovieJson {
         if (jsonObject.has("year") && !jsonObject.get("year").isJsonNull()) {
             try {
                 year = jsonObject.get("year").getAsInt();
-            } catch (NumberFormatException | IllegalStateException e) {
+            } catch (NumberFormatException | IllegalStateException ignored) {
+                return null;
             }
         }
 
