@@ -3,7 +3,6 @@ package ru.practicum.moviehub.http;
 import com.google.gson.*;
 import com.sun.net.httpserver.HttpExchange;
 import ru.practicum.moviehub.api.ErrorResponse;
-import ru.practicum.moviehub.api.MovieJson;
 import ru.practicum.moviehub.model.Movie;
 import ru.practicum.moviehub.store.MoviesStore;
 import ru.practicum.moviehub.types.ListOfMoviesTypeToken;
@@ -13,8 +12,15 @@ import java.time.LocalDate;
 import java.util.*;
 
 class MoviesHandler extends BaseHttpHandler {
+    public static final int YEAR_MIN = 1888;
+    public static final int TITLE_MAX = 100;
+
     private final MoviesStore moviesStore;
     private final Gson gson;
+
+    public static int getYearMax() {
+        return LocalDate.now().getYear() + 1;
+    }
 
     public MoviesHandler(MoviesStore moviesStore) {
         super();
@@ -113,13 +119,10 @@ class MoviesHandler extends BaseHttpHandler {
         }
 
         try {
-            MovieJson movieJson = new MovieJson(new String(ex.getRequestBody().readAllBytes(), DEFAULT_CHARSET));
-            String title = movieJson.getTitle();
-            Integer year = movieJson.getYear();
-
-            List<String> errorList = getMovieErrors(title, year);
+            Movie movieNew = gson.fromJson(new String(ex.getRequestBody().readAllBytes(), DEFAULT_CHARSET), Movie.class);
+            List<String> errorList = getMovieErrors(movieNew.getTitle(), movieNew.getYear());
             if (errorList.isEmpty()) {
-                int id = moviesStore.addMovie(title, year);
+                int id = moviesStore.addMovie(movieNew);
                 answer = gson.toJson(moviesStore.getMovie(id), Movie.class);
                 sendJson(ex, 201, answer);
             } else {
@@ -137,22 +140,21 @@ class MoviesHandler extends BaseHttpHandler {
         List<String> result = new ArrayList<>();
 
         if (!checkMovieTitle(title)) {
-            result.add(ErrorResponse.getErrorTitle());
+            result.add(ErrorResponse.getErrorTitle(TITLE_MAX));
         }
         if (!checkMovieYear(year)) {
-            result.add(ErrorResponse.getErrorYear());
+            result.add(ErrorResponse.getErrorYear(YEAR_MIN, getYearMax()));
         }
 
         return result;
     }
 
     protected boolean checkMovieTitle(String title) {
-        return title != null && !title.isBlank() && title.length() <= 100;
+        return title != null && !title.isBlank() && title.length() <= TITLE_MAX;
     }
 
     protected boolean checkMovieYear(Integer year) {
-        int yearEnd = LocalDate.now().getYear() + 1;
-        return year != null && year >= 1888 && year <= yearEnd;
+        return year != null && year >= YEAR_MIN && year <= getYearMax();
     }
 
     protected void handleDelete(HttpExchange ex) throws IOException {

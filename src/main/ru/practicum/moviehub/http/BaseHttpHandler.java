@@ -12,8 +12,8 @@ import java.util.Map;
 import java.util.Optional;
 
 public abstract class BaseHttpHandler implements HttpHandler {
-    protected static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
-    protected static final String CT_JSON = "application/json; charset=UTF-8";
+    public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
+    public static final String CT_JSON = "application/json; charset=UTF-8";
 
     protected void sendJson(HttpExchange ex, int status, String json) throws IOException {
         ex.getResponseHeaders().set("Content-Type", CT_JSON);

@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 public class MoviesServer {
+    public static final String HTTP_CONTEXT_MOVIES = "/movies";
+
     private MoviesStore moviesStore;
     private final int port;
     private final HttpServer server;
@@ -17,7 +19,7 @@ public class MoviesServer {
 
         try {
             server = HttpServer.create(new InetSocketAddress(port), 0);
-            server.createContext("/movies", new MoviesHandler(this.moviesStore));
+            server.createContext(HTTP_CONTEXT_MOVIES, new MoviesHandler(this.moviesStore));
         } catch (IOException e) {
             throw new RuntimeException("Не удалось создать HTTP-сервер", e);
         }

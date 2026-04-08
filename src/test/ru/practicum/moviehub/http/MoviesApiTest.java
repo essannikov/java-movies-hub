@@ -15,14 +15,12 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class MoviesApiTest {
-    protected static final String CT_JSON = "application/json; charset=UTF-8";
-    private static final String BASE = "http://localhost:8080"; // !!! добавьте базовую часть URL
+    private static final String BASE = "http://localhost:8080";
     private static MoviesServer server;
     private static HttpClient client;
     private static Gson gson;
@@ -30,8 +28,8 @@ public class MoviesApiTest {
     @BeforeAll
     static void beforeAll() {
         MoviesStore moviesStore = new MoviesStore();
-        moviesStore.addMovie("Braveheart", 1995);
-        moviesStore.addMovie("The Fifth Element", 1997);
+        moviesStore.addMovie(new Movie("Braveheart", 1995));
+        moviesStore.addMovie(new Movie("The Fifth Element", 1997));
 
         server = new MoviesServer(moviesStore, 8080);
         server.start();
@@ -56,19 +54,19 @@ public class MoviesApiTest {
     void checkContentType(HttpResponse<String> resp) {
         String contentTypeHeaderValue =
                 resp.headers().firstValue("Content-Type").orElse("");
-        assertEquals(CT_JSON, contentTypeHeaderValue,
+        assertEquals(BaseHttpHandler.CT_JSON, contentTypeHeaderValue,
                 "Content-Type должен содержать формат данных и кодировку");
     }
 
     @Test
     void getMoviesReturnsArray() throws Exception {
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(BASE + "/movies"))
+                .uri(URI.create(BASE + MoviesServer.HTTP_CONTEXT_MOVIES))
                 .GET()
                 .build();
 
         HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                client.send(req, HttpResponse.BodyHandlers.ofString(BaseHttpHandler.DEFAULT_CHARSET));
         assertEquals(200, resp.statusCode(), "GET /movies должен вернуть 200");
 
         checkContentType(resp);
@@ -83,13 +81,13 @@ public class MoviesApiTest {
         String newMovie = "{\"title\":\"Avatar\", \"year\":\"2009\"}";
 
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(BASE + "/movies"))
-                .header("Content-Type", CT_JSON)
+                .uri(URI.create(BASE + MoviesServer.HTTP_CONTEXT_MOVIES))
+                .header("Content-Type", BaseHttpHandler.CT_JSON)
                 .POST(HttpRequest.BodyPublishers.ofString(newMovie))
                 .build();
 
         HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                client.send(req, HttpResponse.BodyHandlers.ofString(BaseHttpHandler.DEFAULT_CHARSET));
         assertEquals(201, resp.statusCode(), "POST /movies должен вернуть 201");
 
         checkContentType(resp);
@@ -104,13 +102,13 @@ public class MoviesApiTest {
         String newMovie = "{\"title\":\"\", \"year\":\"2009\"}";
 
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(BASE + "/movies"))
-                .header("Content-Type", CT_JSON)
+                .uri(URI.create(BASE + MoviesServer.HTTP_CONTEXT_MOVIES))
+                .header("Content-Type", BaseHttpHandler.CT_JSON)
                 .POST(HttpRequest.BodyPublishers.ofString(newMovie))
                 .build();
 
         HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                client.send(req, HttpResponse.BodyHandlers.ofString(BaseHttpHandler.DEFAULT_CHARSET));
         assertEquals(422, resp.statusCode(), "POST /movies должен вернуть 422");
 
         checkContentType(resp);
@@ -118,7 +116,7 @@ public class MoviesApiTest {
         String body = resp.body().trim();
         ErrorResponse errorResponse = gson.fromJson(body, ErrorResponse.class);
         assertEquals(1, errorResponse.getDetails().length);
-        assertEquals(ErrorResponse.getErrorTitle(), errorResponse.getDetails()[0]);
+        assertEquals(ErrorResponse.getErrorTitle(MoviesHandler.TITLE_MAX), errorResponse.getDetails()[0]);
     }
 
     @Test
@@ -126,13 +124,13 @@ public class MoviesApiTest {
         String newMovie = "{\"title\":\"" + "Name".repeat(30) + "\", \"year\":\"2009\"}";
 
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(BASE + "/movies"))
-                .header("Content-Type", CT_JSON)
+                .uri(URI.create(BASE + MoviesServer.HTTP_CONTEXT_MOVIES))
+                .header("Content-Type", BaseHttpHandler.CT_JSON)
                 .POST(HttpRequest.BodyPublishers.ofString(newMovie))
                 .build();
 
         HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                client.send(req, HttpResponse.BodyHandlers.ofString(BaseHttpHandler.DEFAULT_CHARSET));
         assertEquals(422, resp.statusCode(), "POST /movies должен вернуть 422");
 
         checkContentType(resp);
@@ -140,7 +138,7 @@ public class MoviesApiTest {
         String body = resp.body().trim();
         ErrorResponse errorResponse = gson.fromJson(body, ErrorResponse.class);
         assertEquals(1, errorResponse.getDetails().length);
-        assertEquals(ErrorResponse.getErrorTitle(), errorResponse.getDetails()[0]);
+        assertEquals(ErrorResponse.getErrorTitle(MoviesHandler.TITLE_MAX), errorResponse.getDetails()[0]);
     }
 
     @Test
@@ -148,13 +146,13 @@ public class MoviesApiTest {
         String newMovie = "{\"title\":\"Avatar\", \"year\":\"999\"}";
 
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(BASE + "/movies"))
-                .header("Content-Type", CT_JSON)
+                .uri(URI.create(BASE + MoviesServer.HTTP_CONTEXT_MOVIES))
+                .header("Content-Type", BaseHttpHandler.CT_JSON)
                 .POST(HttpRequest.BodyPublishers.ofString(newMovie))
                 .build();
 
         HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                client.send(req, HttpResponse.BodyHandlers.ofString(BaseHttpHandler.DEFAULT_CHARSET));
         assertEquals(422, resp.statusCode(), "POST /movies должен вернуть 422");
 
         checkContentType(resp);
@@ -162,7 +160,7 @@ public class MoviesApiTest {
         String body = resp.body().trim();
         ErrorResponse errorResponse = gson.fromJson(body, ErrorResponse.class);
         assertEquals(1, errorResponse.getDetails().length);
-        assertEquals(ErrorResponse.getErrorYear(), errorResponse.getDetails()[0]);
+        assertEquals(ErrorResponse.getErrorYear(MoviesHandler.YEAR_MIN, MoviesHandler.getYearMax()), errorResponse.getDetails()[0]);
     }
 
     @Test
@@ -170,13 +168,13 @@ public class MoviesApiTest {
         String newMovie = "{\"title\":\"Avatar\", \"year\":\"2009\"}";
 
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(BASE + "/movies"))
+                .uri(URI.create(BASE + MoviesServer.HTTP_CONTEXT_MOVIES))
                 .header("Content-Type", "application/xml; charset=UTF-8")
                 .POST(HttpRequest.BodyPublishers.ofString(newMovie))
                 .build();
 
         HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                client.send(req, HttpResponse.BodyHandlers.ofString(BaseHttpHandler.DEFAULT_CHARSET));
         assertEquals(415, resp.statusCode(), "POST /movies должен вернуть 415");
     }
 
@@ -185,25 +183,25 @@ public class MoviesApiTest {
         String newMovie = "\"title\"=\"Avatar\" \"year\":\"2009\"}";
 
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(BASE + "/movies"))
-                .header("Content-Type", CT_JSON)
+                .uri(URI.create(BASE + MoviesServer.HTTP_CONTEXT_MOVIES))
+                .header("Content-Type", BaseHttpHandler.CT_JSON)
                 .POST(HttpRequest.BodyPublishers.ofString(newMovie))
                 .build();
 
         HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                client.send(req, HttpResponse.BodyHandlers.ofString(BaseHttpHandler.DEFAULT_CHARSET));
         assertEquals(422, resp.statusCode(), "POST /movies должен вернуть 422");
     }
 
     @Test
     void getMoviesReturnById() throws Exception {
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(BASE + "/movies/1"))
+                .uri(URI.create(BASE + MoviesServer.HTTP_CONTEXT_MOVIES + "/1"))
                 .GET()
                 .build();
 
         HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                client.send(req, HttpResponse.BodyHandlers.ofString(BaseHttpHandler.DEFAULT_CHARSET));
         assertEquals(200, resp.statusCode(), "GET /movies должен вернуть 200");
 
         checkContentType(resp);
@@ -216,12 +214,12 @@ public class MoviesApiTest {
     @Test
     void getMoviesReturnByIdNotFound() throws Exception {
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(BASE + "/movies/11"))
+                .uri(URI.create(BASE + MoviesServer.HTTP_CONTEXT_MOVIES + "/11"))
                 .GET()
                 .build();
 
         HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                client.send(req, HttpResponse.BodyHandlers.ofString(BaseHttpHandler.DEFAULT_CHARSET));
         assertEquals(404, resp.statusCode(), "GET /movies должен вернуть 404");
 
         checkContentType(resp);
@@ -234,12 +232,12 @@ public class MoviesApiTest {
     @Test
     void getMoviesReturnByIdIncorrect() throws Exception {
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(BASE + "/movies/asd"))
+                .uri(URI.create(BASE + MoviesServer.HTTP_CONTEXT_MOVIES + "/asd"))
                 .GET()
                 .build();
 
         HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                client.send(req, HttpResponse.BodyHandlers.ofString(BaseHttpHandler.DEFAULT_CHARSET));
         assertEquals(400, resp.statusCode(), "GET /movies должен вернуть 400");
 
         checkContentType(resp);
@@ -252,36 +250,36 @@ public class MoviesApiTest {
     @Test
     void deleteMoviesById() throws Exception {
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(BASE + "/movies/2"))
+                .uri(URI.create(BASE + MoviesServer.HTTP_CONTEXT_MOVIES + "/2"))
                 .DELETE()
                 .build();
 
         HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                client.send(req, HttpResponse.BodyHandlers.ofString(BaseHttpHandler.DEFAULT_CHARSET));
         assertEquals(204, resp.statusCode(), "GET /movies должен вернуть 204");
     }
 
     @Test
     void deleteMoviesByIdNotFound() throws Exception {
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(BASE + "/movies/11"))
+                .uri(URI.create(BASE + MoviesServer.HTTP_CONTEXT_MOVIES + "/11"))
                 .DELETE()
                 .build();
 
         HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                client.send(req, HttpResponse.BodyHandlers.ofString(BaseHttpHandler.DEFAULT_CHARSET));
         assertEquals(404, resp.statusCode(), "GET /movies должен вернуть 404");
     }
 
     @Test
     void deleteMoviesByIdIncorrect() throws Exception {
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(BASE + "/movies/asd"))
+                .uri(URI.create(BASE + MoviesServer.HTTP_CONTEXT_MOVIES + "/asd"))
                 .DELETE()
                 .build();
 
         HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                client.send(req, HttpResponse.BodyHandlers.ofString(BaseHttpHandler.DEFAULT_CHARSET));
         assertEquals(400, resp.statusCode(), "GET /movies должен вернуть 400");
 
         checkContentType(resp);
@@ -294,12 +292,12 @@ public class MoviesApiTest {
     @Test
     void getMoviesForYearReturnsArray() throws Exception {
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(BASE + "/movies?year=1995"))
+                .uri(URI.create(BASE + MoviesServer.HTTP_CONTEXT_MOVIES + "?year=1995"))
                 .GET()
                 .build();
 
         HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                client.send(req, HttpResponse.BodyHandlers.ofString(BaseHttpHandler.DEFAULT_CHARSET));
         assertEquals(200, resp.statusCode(), "GET /movies должен вернуть 200");
 
         checkContentType(resp);
@@ -312,12 +310,12 @@ public class MoviesApiTest {
     @Test
     void getMoviesForYearReturnsEmptyArray() throws Exception {
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(BASE + "/movies?year=2000"))
+                .uri(URI.create(BASE + MoviesServer.HTTP_CONTEXT_MOVIES + "?year=2000"))
                 .GET()
                 .build();
 
         HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                client.send(req, HttpResponse.BodyHandlers.ofString(BaseHttpHandler.DEFAULT_CHARSET));
         assertEquals(200, resp.statusCode(), "GET /movies должен вернуть 200");
 
         checkContentType(resp);
@@ -329,12 +327,12 @@ public class MoviesApiTest {
     @Test
     void getMoviesForYearErrorParameter() throws Exception {
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(BASE + "/movies?year=asd"))
+                .uri(URI.create(BASE + MoviesServer.HTTP_CONTEXT_MOVIES + "?year=asd"))
                 .GET()
                 .build();
 
         HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                client.send(req, HttpResponse.BodyHandlers.ofString(BaseHttpHandler.DEFAULT_CHARSET));
         assertEquals(400, resp.statusCode(), "GET /movies должен вернуть 400");
 
         checkContentType(resp);
@@ -342,5 +340,20 @@ public class MoviesApiTest {
         String body = resp.body().trim();
         ErrorResponse errorResponse = gson.fromJson(body, ErrorResponse.class);
         assertEquals(ErrorResponse.getErrorParameterIncorrect("year"), errorResponse.getError());
+    }
+
+    @Test
+    void putMoviesError() throws Exception {
+        String newMovie = "{\"title\":\"Avatar\", \"year\":\"2009\"}";
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + MoviesServer.HTTP_CONTEXT_MOVIES))
+                .header("Content-Type", BaseHttpHandler.CT_JSON)
+                .PUT(HttpRequest.BodyPublishers.ofString(newMovie))
+                .build();
+
+        HttpResponse<String> resp =
+                client.send(req, HttpResponse.BodyHandlers.ofString(BaseHttpHandler.DEFAULT_CHARSET));
+        assertEquals(405, resp.statusCode(), "POST /movies должен вернуть 405");
     }
 }

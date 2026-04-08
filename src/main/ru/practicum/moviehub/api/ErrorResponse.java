@@ -40,13 +40,12 @@ public class ErrorResponse {
         return "Некорректный путь";
     }
 
-    public static String getErrorTitle() {
-        return "Название должно быть не пустой строкой, длиной до 100 символов";
+    public static String getErrorTitle(int lengthMax) {
+        return "Название должно быть не пустой строкой, длиной до " + lengthMax + " символов";
     }
 
-    public static String getErrorYear() {
-        int yearEnd = LocalDate.now().getYear() + 1;
-        return "Год принимает значения от 1888 до " + yearEnd;
+    public static String getErrorYear(int yearMin, int yearMax) {
+        return "Год принимает значения от " + yearMin + " до " + yearMax;
     }
 
     public static String getErrorValidation() {

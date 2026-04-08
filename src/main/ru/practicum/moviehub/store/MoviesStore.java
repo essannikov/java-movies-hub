@@ -19,9 +19,9 @@ public class MoviesStore {
         return moviesMap.get(id);
     }
 
-    public int addMovie(String title, int year) {
+    public int addMovie(Movie movie) {
         int id = nextIdCount();
-        moviesMap.put(id, new Movie(id, title, year));
+        moviesMap.put(id, movie);
         return id;
     }
 
