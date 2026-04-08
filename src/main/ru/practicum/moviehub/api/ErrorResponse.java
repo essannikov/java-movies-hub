@@ -1,6 +1,5 @@
 package ru.practicum.moviehub.api;
 
-import java.time.LocalDate;
 
 public class ErrorResponse {
     private final String error;
